@@ -16,7 +16,8 @@ import java.io.IOException;
 public class ServerMessager {
 
   private static List<PrintWriter> clients;
-  public static  ArrayList<String> activeUsers;
+  public static ArrayList<String> activeUsers = new ArrayList<String>(10);
+  public static int clientCount;
   private static final boolean RUNNING = true;
 
   public static void main(String[] args) {
@@ -25,22 +26,22 @@ public class ServerMessager {
 
     clients = Collections.synchronizedList (new LinkedList<PrintWriter>());
     try (
-        ServerSocket serverSocket = new ServerSocket(65530);
+      ServerSocket serverSocket = new ServerSocket(65530);
       ) {
-        System.out.println("Waiting for client connections...");
-        while(RUNNING) {
-            try {
-                Socket clientSocket = serverSocket.accept();
-                ClientConnection client = new ClientConnection(clientSocket);
-                threadPool.execute(client);
-            } catch (IOException e) {
-                System.err.println("IOException: Could not accept client connection");
-                System.err.println(e.getMessage());
-            }
+      System.out.println("Waiting for client connections...");
+      while(RUNNING) {
+        try {
+          Socket clientSocket = serverSocket.accept();
+          ClientConnection client = new ClientConnection(clientSocket);
+          threadPool.execute(client);
+        } catch (IOException e) {
+          System.err.println("IOException: Could not accept client connection");
+          System.err.println(e.getMessage());
+          }
         }
     } catch (IOException e) {
-          System.err.println("IOException: Could not create ServerSocket on port " + 65530);
-          System.out.println(e.getMessage());
+        System.err.println("IOException: Could not create ServerSocket on port " + 65530);
+        System.out.println(e.getMessage());
     }
 
     threadPool.shutdown();
@@ -75,19 +76,19 @@ public class ServerMessager {
               String userAuth = in.readLine();
               String[] tokens = userAuth.split(" ");
               if(tokens.length > 2){
-                  this.userName = tokens[2];
-                  notAuthorized = false;
+                this.userName = tokens[2];
+                populateUserList(this.userName);
+                notAuthorized = false;
               }
           }
           System.out.printf("Server: %s has joined the Server.\n" , this.userName);
           broadcast(String.format("Server: Welcome %s !\n", this.userName, this.userName), out);
-          //ServerMessager.activeUsers.add(this.userName);
           String line = "";
         //System.out.printf("%s: %s\n", this.userName, line);
         while((line = in.readLine()) != null) {
           //IF ELSE 
           if(line.equals("AllUsers")){
-             // activeUsers(this.out);
+            privateMessage(displayUsers(), this.out);
           }
           else{
             System.out.printf("%s: %s\n", this.userName, line);
@@ -126,15 +127,17 @@ public class ServerMessager {
         }
     }
 
-   /* public void activeUsers(PrintWriter thisUser){
-        for(PrintWriter client : ServerMessager.clients){
-            if(client == thisUser){
-              for(String activeUsers : ServerMessager.activeUsers)
-                  client.println(activeUsers);
-            }
-        }
-    }*/
+   public void populateUserList(String user){
+      ServerMessager.activeUsers.add(user);
+   }
 
+   public static String displayUsers(){
+    String list = "";
+      for(int i = 0; i < ServerMessager.activeUsers.size(); i++){
+        list += activeUsers.get(i) + "\n";
+      }
+      return list;
+   }
 
 
 
